@@ -10,6 +10,58 @@
   <canvas id="canvas"></canvas>
 
   <div id="controls">
+
+    <!-- FORMATION -->
+    <span class="section-label first">Formation</span>
+    <div id="shape-section">
+      <div class="card-grid two-col">
+        <button class="shape-card active" data-value="circle">○<span>Circle</span></button>
+        <button class="shape-card" data-value="triangle">△<span>Triangle</span></button>
+        <button class="shape-card" data-value="freeform">✦<span>Freeform</span></button>
+        <button class="shape-card" data-value="wave">∿<span>Wave</span></button>
+        <button class="shape-card" data-value="harmonic">ψ<span>Harmonic</span></button>
+        <button class="shape-card" data-value="lissajous">∞<span>Lissajous</span></button>
+      </div>
+    </div>
+
+    <!-- WAVE -->
+    <span class="section-label">Wave</span>
+    <div class="control-group">
+      <label for="frequency">Freq</label>
+      <input type="range" id="frequency" min="1" max="8" value="3" step="1" />
+      <span class="value-display" id="frequency-val">3</span>
+    </div>
+    <div class="control-group">
+      <label for="wave-speed">W.Speed</label>
+      <input type="range" id="wave-speed" min="0" max="100" value="40" step="1" />
+      <span class="value-display" id="wave-speed-val">40</span>
+    </div>
+
+    <!-- PHYSICS -->
+    <span class="section-label">Physics</span>
+    <div class="control-group">
+      <label for="tightness">Tightness</label>
+      <input type="range" id="tightness" min="0" max="100" value="65" step="1" />
+      <span class="value-display" id="tightness-val">65</span>
+    </div>
+    <div class="control-group">
+      <label for="motion">Motion</label>
+      <input type="range" id="motion" min="0" max="100" value="35" step="1" />
+      <span class="value-display" id="motion-val">35</span>
+    </div>
+    <div class="control-group">
+      <label for="cursor-strength">Cursor</label>
+      <input type="range" id="cursor-strength" min="0" max="300" value="100" step="5" />
+      <span class="value-display" id="cursor-strength-val">100</span>
+    </div>
+
+    <!-- PARTICLES -->
+    <span class="section-label">Particles</span>
+    <div class="control-group">
+      <label for="count">Count</label>
+      <input type="range" id="count" min="50" max="3000" value="800" step="50" />
+      <span class="value-display" id="count-val">800</span>
+    </div>
     <div class="control-group">
       <label for="scale">Scale</label>
       <input type="range" id="scale" min="1" max="100" value="30" step="1" />
@@ -20,28 +72,20 @@
       <input type="range" id="speed" min="0" max="100" value="20" step="1" />
       <span class="value-display" id="speed-val">20</span>
     </div>
-    <div class="control-group">
-      <label for="palette">Palette</label>
-      <select id="palette">
-        <option value="mono">Mono</option>
-        <option value="ice">Ice</option>
-        <option value="ember">Ember</option>
-        <option value="acid">Acid</option>
-        <option value="dusk">Dusk</option>
-      </select>
+
+    <!-- COLOR -->
+    <span class="section-label">Color</span>
+    <div class="palette-row">
+      <button class="palette-card active" data-value="mono" title="Mono" style="background: linear-gradient(to right, #111, #fff)"></button>
+      <button class="palette-card" data-value="ice" title="Ice" style="background: linear-gradient(to right, #0a1450, #dcf0ff)"></button>
+      <button class="palette-card" data-value="ember" title="Ember" style="background: linear-gradient(to right, #000, #c80000, #ff6600, #fff)"></button>
+      <button class="palette-card" data-value="acid" title="Acid" style="background: linear-gradient(to right, #1e3d0f, #00ff44)"></button>
+      <button class="palette-card" data-value="dusk" title="Dusk" style="background: linear-gradient(to right, #0a0528, #c850c0, #ffcc70)"></button>
     </div>
-    <div class="control-group">
-      <label for="mode">Mode</label>
-      <select id="mode">
-        <option value="flow">Flow Field</option>
-        <option value="domain">Domain Warp</option>
-        <option value="ridged">Ridged</option>
-      </select>
-    </div>
+
     <button id="save-btn">Save PNG</button>
   </div>
 
-  <script src="noise.js"></script>
   <script src="main.js"></script>
 </body>
 </html>
