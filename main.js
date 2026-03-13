@@ -30,7 +30,7 @@ const state = {
   waveSpeed: 40,
 };
 
-const paletteIndex = { mono: 0, ice: 1, ember: 2, acid: 3, dusk: 4 };
+const paletteIndex = { mono: 0, ice: 1, ember: 2, acid: 3, dusk: 4, aurora: 5 };
 
 // --- Shaders ---
 const VS = `
@@ -89,11 +89,21 @@ vec3 palette_dusk(float t) {
   return vec3(r, g, b);
 }
 
+vec3 palette_aurora(float t) {
+  float r = t < 0.5 ? 0.0 : mix(0.0, 123.0/255.0, (t-0.5)*2.0);
+  float g = t < 0.5 ? mix(26.0/255.0, 1.0, t*2.0)
+                    : mix(1.0, 47.0/255.0, (t-0.5)*2.0);
+  float b = t < 0.5 ? mix(15.0/255.0, 204.0/255.0, t*2.0)
+                    : mix(204.0/255.0, 1.0, (t-0.5)*2.0);
+  return vec3(r, g, b);
+}
+
 vec3 applyPalette(float t, int p) {
   if (p == 1) return palette_ice(t);
   if (p == 2) return palette_ember(t);
   if (p == 3) return palette_acid(t);
   if (p == 4) return palette_dusk(t);
+  if (p == 5) return palette_aurora(t);
   return palette_mono(t);
 }
 
