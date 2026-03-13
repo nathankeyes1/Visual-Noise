@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Visual Noise</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+
+  <div id="controls">
+    <div class="control-group">
+      <label for="scale">Scale</label>
+      <input type="range" id="scale" min="1" max="100" value="30" step="1" />
+      <span class="value-display" id="scale-val">30</span>
+    </div>
+    <div class="control-group">
+      <label for="speed">Speed</label>
+      <input type="range" id="speed" min="0" max="100" value="20" step="1" />
+      <span class="value-display" id="speed-val">20</span>
+    </div>
+    <div class="control-group">
+      <label for="palette">Palette</label>
+      <select id="palette">
+        <option value="mono">Mono</option>
+        <option value="ice">Ice</option>
+        <option value="ember">Ember</option>
+        <option value="acid">Acid</option>
+        <option value="dusk">Dusk</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label for="mode">Mode</label>
+      <select id="mode">
+        <option value="flow">Flow Field</option>
+        <option value="domain">Domain Warp</option>
+        <option value="ridged">Ridged</option>
+      </select>
+    </div>
+    <button id="save-btn">Save PNG</button>
+  </div>
+
+  <script src="noise.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>
