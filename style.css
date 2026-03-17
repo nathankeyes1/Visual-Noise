@@ -265,6 +265,111 @@ input[type="range"]::-webkit-slider-thumb:active {
   }
 }
 
+/* --- Theme toggle --- */
+#theme-toggle {
+  position: fixed;
+  top: 20px;
+  left: 24px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.6);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 150ms ease-out, border-color 150ms ease-out,
+              color 150ms ease-out, transform 100ms ease-out;
+  z-index: 10;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  #theme-toggle:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.25);
+    color: #fff;
+  }
+}
+
+#theme-toggle:active { transform: scale(0.96); }
+
+/* --- Light mode overrides --- */
+body.light-mode #theme-toggle {
+  background: rgba(0, 0, 0, 0.06);
+  border-color: rgba(0, 0, 0, 0.14);
+  color: rgba(0, 0, 0, 0.55);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  body.light-mode #theme-toggle:hover {
+    background: rgba(0, 0, 0, 0.12);
+    border-color: rgba(0, 0, 0, 0.22);
+    color: rgba(0, 0, 0, 0.85);
+  }
+}
+
+body.light-mode #controls {
+  background: rgba(240, 232, 214, 0.82);
+  border-color: rgba(0, 0, 0, 0.08);
+  color: rgba(0, 0, 0, 0.7);
+}
+
+body.light-mode .section-label {
+  color: rgba(0, 0, 0, 0.3);
+  border-top-color: rgba(0, 0, 0, 0.08);
+}
+
+body.light-mode .control-group label { color: rgba(0, 0, 0, 0.4); }
+body.light-mode .value-display       { color: rgba(0, 0, 0, 0.45); }
+
+body.light-mode input[type="range"] {
+  background: rgba(0, 0, 0, 0.15);
+}
+
+body.light-mode input[type="range"]::-webkit-slider-thumb {
+  background: #222;
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.2);
+}
+
+body.light-mode .shape-card,
+body.light-mode .flock-card {
+  background: rgba(0, 0, 0, 0.05);
+  color: rgba(0, 0, 0, 0.55);
+}
+
+body.light-mode .shape-card span,
+body.light-mode .flock-card span { color: rgba(0, 0, 0, 0.35); }
+
+body.light-mode .shape-card.active,
+body.light-mode .flock-card.active {
+  border-color: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.1);
+  color: rgba(0, 0, 0, 0.85);
+}
+
+body.light-mode .shape-card.active span,
+body.light-mode .flock-card.active span { color: rgba(0, 0, 0, 0.55); }
+
+body.light-mode #save-btn {
+  background: rgba(0, 0, 0, 0.06);
+  border-color: rgba(0, 0, 0, 0.1);
+  color: rgba(0, 0, 0, 0.55);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  body.light-mode .shape-card:hover,
+  body.light-mode .flock-card:hover {
+    background: rgba(0, 0, 0, 0.1);
+    color: rgba(0, 0, 0, 0.85);
+  }
+  body.light-mode #save-btn:hover {
+    background: rgba(0, 0, 0, 0.12);
+    border-color: rgba(0, 0, 0, 0.2);
+    color: rgba(0, 0, 0, 0.85);
+  }
+}
+
 @keyframes controlsEnterMobile {
   from {
     opacity: 0;

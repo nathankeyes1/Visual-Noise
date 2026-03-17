@@ -43,6 +43,7 @@ const state = {
   waveSpeed: 40,
   trail: 0,
   murmuMotion: 'off',
+  lightMode: false,
 };
 
 const paletteIndex = { mono: 0, ice: 1, ember: 2, acid: 3, dusk: 4, aurora: 5 };
@@ -66,6 +67,7 @@ void main() {
 const FS = `
 precision mediump float;
 uniform int u_palette;
+uniform float u_lightMode;
 varying float v_t;
 
 vec3 palette_mono(float t) {
@@ -129,7 +131,9 @@ void main() {
   if (r > 0.25) discard;
   float alpha = exp(-r * 12.0);
   float colorT = clamp(v_t * 1.4, 0.0, 1.0);
-  gl_FragColor = vec4(applyPalette(colorT, u_palette), alpha);
+  vec3 color = applyPalette(colorT, u_palette);
+  color = mix(color, vec3(1.0) - color, u_lightMode);
+  gl_FragColor = vec4(color, alpha);
 }
 `;
 
@@ -161,7 +165,8 @@ void main() { gl_Position = vec4(a_pos, 0.0, 1.0); }
 const FADE_FS = `
 precision mediump float;
 uniform float u_alpha;
-void main() { gl_FragColor = vec4(0.0, 0.0, 0.0, u_alpha); }
+uniform vec3 u_bgColor;
+void main() { gl_FragColor = vec4(u_bgColor, u_alpha); }
 `;
 const fadeProg = gl.createProgram();
 gl.attachShader(fadeProg, compileShader(gl.VERTEX_SHADER,   FADE_VS));
@@ -169,6 +174,7 @@ gl.attachShader(fadeProg, compileShader(gl.FRAGMENT_SHADER, FADE_FS));
 gl.linkProgram(fadeProg);
 const fadeAPos   = gl.getAttribLocation(fadeProg,  'a_pos');
 const uFadeAlpha = gl.getUniformLocation(fadeProg, 'u_alpha');
+const uFadeBg    = gl.getUniformLocation(fadeProg, 'u_bgColor');
 
 // Fullscreen clip-space quad (triangle strip: BL, BR, TL, TR)
 const quadBuf = gl.createBuffer();
@@ -197,8 +203,9 @@ let sizeArr   = new Float32Array(N);
 const aPos  = gl.getAttribLocation(prog, 'a_position');
 const aTee  = gl.getAttribLocation(prog, 'a_t');
 const aSize = gl.getAttribLocation(prog, 'a_size');
-const uRes     = gl.getUniformLocation(prog, 'u_resolution');
-const uPalette = gl.getUniformLocation(prog, 'u_palette');
+const uRes       = gl.getUniformLocation(prog, 'u_resolution');
+const uPalette   = gl.getUniformLocation(prog, 'u_palette');
+const uLightMode = gl.getUniformLocation(prog, 'u_lightMode');
 
 gl.enableVertexAttribArray(aPos);
 gl.enableVertexAttribArray(aTee);
@@ -1042,13 +1049,19 @@ function buildArrays() {
   }
 }
 
+// Background colour constants
+const BG_DARK  = [0, 0, 0];
+const BG_LIGHT = [0.941, 0.910, 0.839];  // #f0e8d6 warm tan
+
 // --- Render ---
 function render() {
+  const bg = state.lightMode ? BG_LIGHT : BG_DARK;
+  const useNormalBlend = state.lightMode || state.trail > 0;
+
   if (state.trail === 0) {
+    gl.clearColor(bg[0], bg[1], bg[2], 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT);
   } else {
-    // Fade previous frame toward background instead of hard-clearing
-    // trail=1→fadeAlpha≈0.97 (short trail), trail=100→fadeAlpha=0.03 (very long trail)
     const fadeAlpha = 0.1 * Math.pow(0.02, state.trail / 100);
     gl.useProgram(fadeProg);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
@@ -1056,6 +1069,7 @@ function render() {
     gl.enableVertexAttribArray(fadeAPos);
     gl.vertexAttribPointer(fadeAPos, 2, gl.FLOAT, false, 0, 0);
     gl.uniform1f(uFadeAlpha, fadeAlpha);
+    gl.uniform3f(uFadeBg, bg[0], bg[1], bg[2]);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     gl.useProgram(prog);
     gl.enableVertexAttribArray(aPos);
@@ -1075,15 +1089,14 @@ function render() {
   gl.bufferData(gl.ARRAY_BUFFER, sizeArr, gl.DYNAMIC_DRAW);
   gl.vertexAttribPointer(aSize, 1, gl.FLOAT, false, 0, 0);
 
-  // Trail mode: switch to normal blend so particles don't accumulate to white
-  if (state.trail > 0) gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+  if (useNormalBlend) gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
   gl.uniform2f(uRes, canvas.width, canvas.height);
   gl.uniform1i(uPalette, paletteIndex[state.palette] ?? 0);
+  gl.uniform1f(uLightMode, state.lightMode ? 1.0 : 0.0);
   gl.drawArrays(gl.POINTS, 0, N);
 
-  // Restore additive blend for next frame
-  if (state.trail > 0) gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+  if (useNormalBlend) gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
 }
 
 // --- Resize ---
@@ -1181,6 +1194,12 @@ document.querySelectorAll('.flock-card').forEach(card => {
     card.classList.add('active');
     state.murmuMotion = card.dataset.value;
   });
+});
+
+document.getElementById('theme-toggle').addEventListener('click', () => {
+  state.lightMode = !state.lightMode;
+  document.body.classList.toggle('light-mode', state.lightMode);
+  document.getElementById('theme-toggle').textContent = state.lightMode ? '◑ Dark' : '◑ Light';
 });
 
 document.getElementById('save-btn').addEventListener('click', () => {
