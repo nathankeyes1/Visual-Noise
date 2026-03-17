@@ -29,6 +29,7 @@ let murmuEnergyDot  = 0;   // smoothed rate of change (rubato)
 let sweepPhase      = 0;   // integrates over time → circular sweep direction
 let waveAngle       = Math.PI * 0.25;  // direction of traveling plane wave through flock
 let vortexBlend     = 0;   // 0=calm sheet, 1=full spiral arms — driven by energy peaks
+let vortexPattern   = 0;   // 0=classic roll, 1=outward bloom, 2=split ring, 3=accordion
 
 const state = {
   scale: 30,
@@ -180,8 +181,8 @@ gl.bindBuffer(gl.ARRAY_BUFFER, null);
 gl.useProgram(prog);
 
 // --- Murmuration spread constants ---
-const MURM_SPREAD_X = 0.24;  // half-width fraction of W (full width = 48% canvas)
-const MURM_SPREAD_Y = 0.13;  // half-height fraction of H (full height = 26% canvas)
+const MURM_SPREAD_X = 0.16;  // half-width fraction of W (full width = 32% canvas)
+const MURM_SPREAD_Y = 0.09;  // half-height fraction of H (full height = 18% canvas)
 
 // --- Particle data ---
 let N = 1600;
@@ -671,8 +672,13 @@ function tick(dt) {
     const vortexTarget = murmuEnergy > 0.35
       ? Math.pow((murmuEnergy - 0.35) / 0.65, 1.5)
       : 0;
+    const wasInactive = vortexBlend < 0.05;
     const vortexRate = vortexTarget > vortexBlend ? 1.5 : 0.35;
     vortexBlend += (vortexTarget - vortexBlend) * Math.min(dt * vortexRate, 1.0);
+    // Lock in a new random pattern at the start of each burst
+    if (wasInactive && vortexBlend >= 0.05) {
+      vortexPattern = Math.floor(Math.random() * 4);
+    }
   }
 
   updateMurmuralGrid(dt);
@@ -809,7 +815,15 @@ function tick(dt) {
         // Differential rotation: inner birds faster than outer → arms sweep side to side
         const bRadius = Math.hypot(p.bxr, p.byr);
         const rNorm   = Math.min(bRadius / (W * MURM_SPREAD_X), 1.0);
-        const omega   = phaseRate * 0.08 * (1.0 - 0.72 * rNorm) * (1.0 + 0.9 * murmuEnergy) * vortexBlend;
+        const sqrtR   = Math.sqrt(rNorm);
+        let omegaProfile, vortDir;
+        switch (vortexPattern) {
+          case 1:  omegaProfile = 0.45 + 0.55 * sqrtR; vortDir = -1; break;  // outward bloom
+          case 2:  omegaProfile = Math.cos(rNorm * Math.PI); vortDir = 1; break;  // split ring
+          case 3:  omegaProfile = 1.0 - 0.40 * sqrtR; vortDir = Math.sign(Math.sin(time * 0.26)); break;  // accordion ~24s
+          default: omegaProfile = 1.0 - 0.40 * sqrtR; vortDir = 1; break;   // classic roll
+        }
+        const omega = phaseRate * 0.08 * omegaProfile * (1.0 + 0.9 * murmuEnergy) * vortexBlend * vortDir;
         const vortAng = time * omega + p.seed * 0.001;
         const cosV = Math.cos(vortAng), sinV = Math.sin(vortAng);
         const rotX = p.bxr * cosV - p.byr * sinV;
@@ -1139,7 +1153,7 @@ document.querySelectorAll('.shape-card').forEach(card => {
     const W = canvas.width, H = canvas.height;
     if (state.shape === 'murmuration') {
       flockCx = W / 2; flockCy = H / 2; flockVx = 0; flockVy = 0;
-      murmuEnergy = 0; murmuEnergyPrev = 0; murmuEnergyDot = 0; sweepPhase = 0; waveAngle = Math.PI * 0.25; vortexBlend = 0;
+      murmuEnergy = 0; murmuEnergyPrev = 0; murmuEnergyDot = 0; sweepPhase = 0; waveAngle = Math.PI * 0.25; vortexBlend = 0; vortexPattern = 0;
       pickNewFlockTarget(W, H);
       document.getElementById('flock-section').style.display = 'flex';
     } else {
