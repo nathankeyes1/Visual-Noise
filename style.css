@@ -36,6 +36,18 @@ canvas {
   text-transform: uppercase;
   user-select: none;
   width: 224px;
+  animation: controlsEnter 280ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+@keyframes controlsEnter {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) translateX(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0);
+  }
 }
 
 .control-group {
@@ -71,6 +83,17 @@ input[type="range"]::-webkit-slider-thumb {
   background: #fff;
   cursor: pointer;
   box-shadow: 0 0 6px rgba(255, 255, 255, 0.3);
+  transition: transform 100ms ease-out;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+  }
+}
+
+input[type="range"]::-webkit-slider-thumb:active {
+  transform: scale(1.1);
 }
 
 .value-display {
@@ -132,7 +155,7 @@ input[type="range"]::-webkit-slider-thumb {
   color: rgba(255, 255, 255, 0.6);
   font-size: 14px;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: background 150ms ease-out, border-color 150ms ease-out, color 150ms ease-out, transform 100ms ease-out;
 }
 
 .shape-card span {
@@ -140,17 +163,32 @@ input[type="range"]::-webkit-slider-thumb {
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.35);
+  transition: color 150ms ease-out;
 }
 
-.shape-card:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.85);
+@media (hover: hover) and (pointer: fine) {
+  .shape-card:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.85);
+  }
+
+  .shape-card:hover span {
+    color: rgba(255, 255, 255, 0.55);
+  }
+}
+
+.shape-card:active {
+  transform: scale(0.95);
 }
 
 .shape-card.active {
   border-color: rgba(255, 255, 255, 0.7);
   background: rgba(255, 255, 255, 0.12);
   color: #fff;
+}
+
+.shape-card.active span {
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .palette-row {
@@ -164,7 +202,17 @@ input[type="range"]::-webkit-slider-thumb {
   border-radius: 4px;
   border: 1.5px solid transparent;
   cursor: pointer;
-  transition: border-color 0.15s;
+  transition: border-color 150ms ease-out, transform 100ms ease-out;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .palette-card:hover {
+    transform: scale(1.05);
+  }
+}
+
+.palette-card:active {
+  transform: scale(0.95);
 }
 
 .palette-card.active {
@@ -181,12 +229,19 @@ input[type="range"]::-webkit-slider-thumb {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition: background 150ms ease-out, border-color 150ms ease-out, color 150ms ease-out, transform 100ms ease-out;
 }
 
-#save-btn:hover {
-  background: rgba(255, 255, 255, 0.15);
-  color: #fff;
+@media (hover: hover) and (pointer: fine) {
+  #save-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.22);
+    color: #fff;
+  }
+}
+
+#save-btn:active {
+  transform: scale(0.97);
 }
 
 @media (max-width: 640px) {
@@ -199,5 +254,17 @@ input[type="range"]::-webkit-slider-thumb {
     flex-wrap: wrap;
     justify-content: center;
     max-width: calc(100vw - 32px);
+    animation-name: controlsEnterMobile;
+  }
+}
+
+@keyframes controlsEnterMobile {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
   }
 }
