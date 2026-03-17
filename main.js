@@ -13,7 +13,7 @@ if (!gl) {
 
 gl.enable(gl.BLEND);
 gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
-gl.clearColor(0.04, 0.04, 0.04, 1.0);
+gl.clearColor(0, 0, 0, 1.0);
 
 // --- State ---
 let time = 0;
@@ -28,6 +28,7 @@ let murmuEnergyPrev = 0;   // previous frame value, for dE/dt
 let murmuEnergyDot  = 0;   // smoothed rate of change (rubato)
 let sweepPhase      = 0;   // integrates over time → circular sweep direction
 let waveAngle       = Math.PI * 0.25;  // direction of traveling plane wave through flock
+let vortexBlend     = 0;   // 0=calm sheet, 1=full spiral arms — driven by energy peaks
 
 const state = {
   scale: 30,
@@ -39,6 +40,8 @@ const state = {
   cursorStrength: 100,
   frequency: 3,
   waveSpeed: 40,
+  trail: 0,
+  murmuMotion: 'off',
 };
 
 const paletteIndex = { mono: 0, ice: 1, ember: 2, acid: 3, dusk: 4, aurora: 5 };
@@ -148,6 +151,37 @@ if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
   throw new Error(gl.getProgramInfoLog(prog));
 }
 gl.useProgram(prog);
+
+// --- Fade program (fullscreen dark quad for trail effect) ---
+const FADE_VS = `
+attribute vec2 a_pos;
+void main() { gl_Position = vec4(a_pos, 0.0, 1.0); }
+`;
+const FADE_FS = `
+precision mediump float;
+uniform float u_alpha;
+void main() { gl_FragColor = vec4(0.0, 0.0, 0.0, u_alpha); }
+`;
+const fadeProg = gl.createProgram();
+gl.attachShader(fadeProg, compileShader(gl.VERTEX_SHADER,   FADE_VS));
+gl.attachShader(fadeProg, compileShader(gl.FRAGMENT_SHADER, FADE_FS));
+gl.linkProgram(fadeProg);
+const fadeAPos   = gl.getAttribLocation(fadeProg,  'a_pos');
+const uFadeAlpha = gl.getUniformLocation(fadeProg, 'u_alpha');
+
+// Fullscreen clip-space quad (triangle strip: BL, BR, TL, TR)
+const quadBuf = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf);
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+  -1, -1,   1, -1,   -1, 1,   1, 1,
+]), gl.STATIC_DRAW);
+gl.bindBuffer(gl.ARRAY_BUFFER, null);
+
+gl.useProgram(prog);
+
+// --- Murmuration spread constants ---
+const MURM_SPREAD_X = 0.24;  // half-width fraction of W (full width = 48% canvas)
+const MURM_SPREAD_Y = 0.13;  // half-height fraction of H (full height = 26% canvas)
 
 // --- Particle data ---
 let N = 1600;
@@ -351,30 +385,25 @@ function generateLissajous(cx, cy, W, H) {
 }
 
 function generateMurmuration(cx, cy, W, H) {
-  const sigX = W * 0.072, sigY = H * 0.047, sigZ = W * 0.072 * 0.30;
+  const spreadX = W * MURM_SPREAD_X, spreadY = H * MURM_SPREAD_Y;
+  const sigZ    = spreadX * 0.28;
   return Array.from({ length: N }, () => {
-    // Box-Muller for X/Y
-    const u1 = Math.random() + 1e-10, u2 = Math.random();
-    const mag = Math.sqrt(-2 * Math.log(u1));
-    const nx = mag * Math.cos(2 * Math.PI * u2);
-    const ny = mag * Math.sin(2 * Math.PI * u2);
-    // 3-lobed amoeba shape
-    const phi = Math.atan2(ny, nx);
-    const lobeMod = 1.0 + 0.28 * Math.cos(3 * phi + 1.1);
-    const bx = cx + nx * sigX * lobeMod;
-    const by = cy + ny * sigY * lobeMod;
-    // Box-Muller for depth (Z axis — 3D flock thickness)
-    const u3 = Math.random() + 1e-10, u4 = Math.random();
-    const nz = Math.sqrt(-2 * Math.log(u3)) * Math.cos(2 * Math.PI * u4);
-    const bzr = nz * sigZ;
-    // Two-octave warp: large-scale blob deformation + fine edge tendrils
-    const wLx = noiseXY(bx * 0.0015 + 7.1,  by * 0.0015)       * W * 0.018;
-    const wLy = noiseXY(bx * 0.0015 + 13.4, by * 0.0015 + 5.9) * W * 0.018;
-    const wHx = noiseXY(bx * 0.004  + 21.2, by * 0.004)        * W * 0.007;
-    const wHy = noiseXY(bx * 0.004  + 9.7,  by * 0.004 + 3.3)  * W * 0.007;
-    const hx = bx + wLx + wHx;
-    const hy = by + wLy + wHy;
-    return { hx, hy, bx_rel: hx - cx, by_rel: hy - cy, bz_rel: bzr };
+    const r     = Math.sqrt(Math.random());          // sqrt → area-uniform distribution
+    const angle = Math.random() * 2 * Math.PI;
+    const lobeMod = 1.0 + 0.22 * Math.cos(3 * angle + 1.1);  // subtle 3-lobe amoeba
+    const bxr = r * spreadX * lobeMod * Math.cos(angle);
+    const byr = r * spreadY * lobeMod * Math.sin(angle);
+    // Z-depth per bird (organic thickness)
+    const u3 = Math.random() + 1e-10;
+    const bzr = Math.sqrt(-2 * Math.log(u3)) * Math.cos(2 * Math.PI * Math.random()) * sigZ;
+    // Two-octave noise warp (frequencies scaled down for wider spread)
+    const wLx = noiseXY(bxr * 0.00025 + 7.1,  byr * 0.00025)        * W * 0.022;
+    const wLy = noiseXY(bxr * 0.00025 + 13.4, byr * 0.00025 + 5.9)  * W * 0.022;
+    const wHx = noiseXY(bxr * 0.00065 + 21.2, byr * 0.00065)        * W * 0.009;
+    const wHy = noiseXY(bxr * 0.00065 + 9.7,  byr * 0.00065 + 3.3)  * W * 0.009;
+    const hx = cx + bxr + wLx + wHx;
+    const hy = cy + byr + wLy + wHy;
+    return { hx, hy, bx_rel: bxr + wLx + wHx, by_rel: byr + wLy + wHy, bz_rel: bzr };
   });
 }
 
@@ -575,6 +604,14 @@ let distGridNext = new Float32Array(GRID_COLS * GRID_ROWS);
 let distGradX    = new Float32Array(GRID_COLS * GRID_ROWS);
 let distGradY    = new Float32Array(GRID_COLS * GRID_ROWS);
 
+// --- Boids spatial grid (murmuration nearest-neighbor) ---
+const BOIDS_COLS = 36;
+const BOIDS_ROWS = 27;
+const boidsGrid  = Array.from({ length: BOIDS_COLS * BOIDS_ROWS }, () => []);
+// Allocation-free scratch buffers for candidate search hot loop
+const _boidsCandIdx  = new Int32Array(128);
+const _boidsCandDist = new Float32Array(128);
+
 window.addEventListener('mousemove', e => {
   const now = performance.now() / 1000;
   const dt  = Math.max(now - cursor.prevT, 0.001);
@@ -629,6 +666,13 @@ function tick(dt) {
     murmuEnergyDot  = murmuEnergyDot * 0.85 + rawDot * 0.15;
     murmuEnergyPrev = murmuEnergy;
     waveAngle += dt * (0.013 + 0.025 * murmuEnergy);
+
+    // Vortex burst: fast attack when energy crescendos, slow lingering decay
+    const vortexTarget = murmuEnergy > 0.35
+      ? Math.pow((murmuEnergy - 0.35) / 0.65, 1.5)
+      : 0;
+    const vortexRate = vortexTarget > vortexBlend ? 1.5 : 0.35;
+    vortexBlend += (vortexTarget - vortexBlend) * Math.min(dt * vortexRate, 1.0);
   }
 
   updateMurmuralGrid(dt);
@@ -671,25 +715,46 @@ function tick(dt) {
 
     flockCx += flockVx * dt;
     flockCy += flockVy * dt;
+
+    // Lissajous flock path: override waypoint drift to sweep a lissajous figure
+    if (state.murmuMotion === 'lissajous') {
+      const [la, lb] = LISSAJOUS_RATIOS[freq];
+      const ls = phaseRate * 0.25;
+      flockCx = W * 0.5 + Math.sin(la * time * ls) * W * 0.30;
+      flockCy = H * 0.5 + Math.sin(lb * time * ls + Math.PI * 0.5) * H * 0.25;
+    }
   }
 
-  // Pre-compute traveling plane wave constants for murmuration (used inside particle loop)
-  let sigRef, waveAmp2D;
-  let spatFreq1, wdCos1, wdSin1, wdPerpCos1, wdPerpSin1, phase1;
-  let spatFreq2, wdCos2, wdSin2, wdPerpCos2, wdPerpSin2, phase2;
+  // Pre-compute 3D sheet fold constants for murmuration (used inside particle loop)
+  let sigRef;
+  let sheetAmpZ, sheetK1, sheetK2, sheetTilt, focalLen;
+  let wdCos1, wdSin1, wdCos2, wdSin2, phase1, phase2;
   if (state.shape === 'murmuration') {
-    sigRef    = W * 0.088;
-    waveAmp2D = sigRef * (0.55 + 0.45 * murmuEnergy);
-    spatFreq1 = (2 * Math.PI * freq) / (2 * sigRef);
-    wdCos1 = Math.cos(waveAngle); wdSin1 = Math.sin(waveAngle);
-    wdPerpCos1 = -wdSin1; wdPerpSin1 = wdCos1;
-    phase1 = time * phaseRate;
-    // Secondary wave: incommensurate direction + frequency for non-repeating interference
-    const waveAngle2 = waveAngle + 1.2;
-    spatFreq2 = (2 * Math.PI * (freq * 0.7)) / (2 * sigRef);
-    wdCos2 = Math.cos(waveAngle2); wdSin2 = Math.sin(waveAngle2);
-    wdPerpCos2 = -wdSin2; wdPerpSin2 = wdCos2;
-    phase2 = time * phaseRate * 1.3;
+    const spreadX = W * MURM_SPREAD_X, spreadY = H * MURM_SPREAD_Y;
+    sigRef     = spreadX;
+    const calmAmp   = spreadY * (0.28 + 1.1  * murmuEnergy);
+    const vortexAmp = spreadY * (0.12 + 0.45 * murmuEnergy);
+    sheetAmpZ = calmAmp + (vortexAmp - calmAmp) * vortexBlend;
+    sheetK1    = (Math.PI * freq) / (spreadX * 2.0);        // freq=1: one crease; freq=4: four
+    sheetK2    = (Math.PI * (freq * 0.73)) / (spreadX * 2.0);
+    wdCos1     = Math.cos(waveAngle);        wdSin1 = Math.sin(waveAngle);
+    wdCos2     = Math.cos(waveAngle + 1.05); wdSin2 = Math.sin(waveAngle + 1.05);
+    phase1     = time * phaseRate;
+    phase2     = time * phaseRate * 1.31;
+    sheetTilt  = 0.18 * Math.sin(time * 0.07) + 0.07 * Math.sin(time * 0.13);  // slow bank, ~80s cycle
+    focalLen   = Math.min(W, H) * 1.1;
+  }
+
+  // Pre-fill boids spatial grid from current particle positions (murmuration only)
+  if (state.shape === 'murmuration') {
+    for (let ci = 0; ci < boidsGrid.length; ci++) boidsGrid[ci].length = 0;
+    const bCellW = W / BOIDS_COLS, bCellH = H / BOIDS_ROWS;
+    for (let i = 0; i < N; i++) {
+      const p = particles[i];
+      const bc = Math.min(Math.max(Math.floor(p.x / bCellW), 0), BOIDS_COLS - 1);
+      const br = Math.min(Math.max(Math.floor(p.y / bCellH), 0), BOIDS_ROWS - 1);
+      boidsGrid[br * BOIDS_COLS + bc].push(i);
+    }
   }
 
   // Pre-compute Hopf rotation angles once per tick (used inside particle loop)
@@ -728,55 +793,131 @@ function tick(dt) {
         p.hx = hx2;
         p.hy = hy2;
       } else if (state.shape === 'murmuration') {
-        // Quiet breathing: slow per-bird oscillation when energy is near zero
-        // Fades out as energy rises so it doesn't fight expansion
+        // Breathing (unchanged)
         const breatheAmp  = Math.max(0, 1.0 - murmuEnergy * 3) * 0.038 * W;
         const breathPhase = time * 0.65 + p.seed * 0.012;
         const breatheX    = Math.cos(breathPhase) * breatheAmp * 0.6;
-        // Asymmetric: sharp expand (outward), slow contract — biological feel
         const rawSin = Math.sin(breathPhase * 1.13);
         const breatheY = (rawSin > 0
           ? Math.pow(rawSin, 0.7)
           : -Math.pow(-rawSin, 1.4)
         ) * breatheAmp;
-        // Expansion: blob scales outward at crescendo (birds scatter from predator)
+
+        // Expansion (unchanged)
         const expansionScale = 1.0 + 1.8 * Math.pow(murmuEnergy, 1.5);
-        p.hx = flockCx + (p.bxr + breatheX) * expansionScale;
-        p.hy = flockCy + (p.byr + breatheY) * expansionScale;
-        // Lissajous-frequency undulation: freq slider warps the flock's internal wave structure
-        const murmTheta = Math.atan2(p.byr, p.bxr) + Math.PI; // bird's angular position 0→2π
+
+        // Differential rotation: inner birds faster than outer → arms sweep side to side
+        const bRadius = Math.hypot(p.bxr, p.byr);
+        const rNorm   = Math.min(bRadius / (W * MURM_SPREAD_X), 1.0);
+        const omega   = phaseRate * 0.08 * (1.0 - 0.72 * rNorm) * (1.0 + 0.9 * murmuEnergy) * vortexBlend;
+        const vortAng = time * omega + p.seed * 0.001;
+        const cosV = Math.cos(vortAng), sinV = Math.sin(vortAng);
+        const rotX = p.bxr * cosV - p.byr * sinV;
+        const rotY = p.bxr * sinV + p.byr * cosV;
+
+        // 3D fold on rotated position (secondary — adds organic crease density lines)
+        const proj1 = rotX * wdCos1 + rotY * wdSin1;
+        const proj2 = rotX * wdCos2 + rotY * wdSin2;
+        const sZ = (sheetAmpZ * (0.62 * Math.sin(sheetK1 * proj1 - phase1)
+                               + 0.38 * Math.sin(sheetK2 * proj2 - phase2))
+                   + p.bzr * 0.15) * expansionScale;
+
+        // Slow tilt + perspective (unchanged)
+        const cosT = Math.cos(sheetTilt), sinT = Math.sin(sheetTilt);
+        const baseY   = (rotY + breatheY) * expansionScale;
+        const tiltedY = baseY * cosT - sZ * sinT;
+        const tiltedZ = baseY * sinT + sZ * cosT;
+        const perspScale = focalLen / Math.max(focalLen + tiltedZ, focalLen * 0.3);
+        p.hx = flockCx + (rotX + breatheX) * expansionScale * perspScale;
+        p.hy = flockCy + tiltedY * perspScale;
+
+        // Lissajous-frequency undulation (tracks rotated position)
+        const murmTheta = Math.atan2(rotY, rotX) + Math.PI;
         const [la, lb] = LISSAJOUS_RATIOS[freq];
-        const lissAmp = sigRef * 0.22; // ~28px at 1440px — visible but not shape-breaking
-        p.hx += Math.sin(la * murmTheta + phase * 0.5) * lissAmp;
-        p.hy += Math.sin(lb * murmTheta) * lissAmp;
-        // Traveling plane waves: transverse displacement perpendicular to wave directions
-        // Two incommensurate waves produce the undulating, never-repeating murmuration topology
-        const proj1 = p.bxr * wdCos1 + p.byr * wdSin1;
-        const proj2 = p.bxr * wdCos2 + p.byr * wdSin2;
-        const disp1 = waveAmp2D * 0.65 * Math.tanh(1.8 * Math.sin(spatFreq1 * proj1 - phase1));
-        const disp2 = waveAmp2D * 0.45 * Math.tanh(1.8 * Math.sin(spatFreq2 * proj2 - phase2));
-        p.hx += (disp1 * wdPerpCos1 + disp2 * wdPerpCos2) * expansionScale;
-        p.hy += (disp1 * wdPerpSin1 + disp2 * wdPerpSin2) * expansionScale;
-        // 3D rotation wave: amplitude scales with energy (barely moves at piano, dramatic at ff)
-        const sigY_f = H * 0.058;
-        const kwave = 2 * Math.PI / (4 * sigY_f);
-        const omega_wave = 2 * Math.PI / 7;
-        const waveAmp = 0.22 + 0.35 * murmuEnergy;
-        const theta = waveAmp * Math.sin(kwave * p.byr + omega_wave * time);
-        p.hx += p.bxr * (Math.cos(theta) - 1) + p.bzr * Math.sin(theta);
-        // Flow field: birds flee high-disturbance gradient → underdensity = dark bands
+        p.hx += Math.sin(la * murmTheta + phase * 0.5) * W * 0.018;
+        p.hy += Math.sin(lb * murmTheta) * W * 0.018;
+
+        // Collective wave roll across flock X extent
+        if (state.murmuMotion === 'wave') {
+          const wK = (Math.PI * freq) / (W * MURM_SPREAD_X);
+          p.hy += Math.sin(p.bxr * wK - phase1) * H * MURM_SPREAD_Y * 0.8 * expansionScale;
+        }
+
+        // Flow field (unchanged)
         const cellW = W / GRID_COLS, cellH = H / GRID_ROWS;
         const gc = Math.min(Math.max(Math.floor(p.hx / cellW), 0), GRID_COLS - 1);
         const gr = Math.min(Math.max(Math.floor(p.hy / cellH), 0), GRID_ROWS - 1);
         const gradIdx = gr * GRID_COLS + gc;
         p.hx -= distGradX[gradIdx] * W * 0.012;
         p.hy -= distGradY[gradIdx] * H * 0.008;
-        // Ambient noise drift: slow organic shape deformation
+
+        // Ambient noise drift (unchanged)
         const ambientT = time * 0.30;
         const noiseU = noiseXY(p.bxr * 0.0015 + ambientT * 0.6,       p.byr * 0.0015 + ambientT * 0.25 + 3.1);
         const noiseV = noiseXY(p.bxr * 0.0015 + ambientT * 0.4 + 8.4, p.byr * 0.0015 + ambientT * 0.5  + 2.7);
         p.hx += noiseU * W * 0.028;
         p.hy += noiseV * H * 0.032;
+
+        // Topological boids: K=7 nearest neighbors (separation + alignment + cohesion)
+        const K_NEIGHBORS = 7;
+        const SEP_DIST = 28, SEP_STR = 60;
+        const ALIGN_W = 0.08, COH_W = 0.04;
+
+        let sepFx = 0, sepFy = 0, alignVx = 0, alignVy = 0, cohX = 0, cohY = 0;
+        const bCellW2 = W / BOIDS_COLS, bCellH2 = H / BOIDS_ROWS;
+        const pBc = Math.min(Math.max(Math.floor(p.x / bCellW2), 0), BOIDS_COLS - 1);
+        const pBr = Math.min(Math.max(Math.floor(p.y / bCellH2), 0), BOIDS_ROWS - 1);
+
+        let candCount = 0;
+        const candIdx  = _boidsCandIdx;
+        const candDist = _boidsCandDist;
+
+        for (let dr = -1; dr <= 1; dr++) {
+          for (let dc = -1; dc <= 1; dc++) {
+            const nr = pBr + dr, nc = pBc + dc;
+            if (nr < 0 || nr >= BOIDS_ROWS || nc < 0 || nc >= BOIDS_COLS) continue;
+            const cell = boidsGrid[nr * BOIDS_COLS + nc];
+            for (let ci = 0; ci < cell.length; ci++) {
+              const j = cell[ci];
+              if (j === i) continue;
+              const q = particles[j];
+              const ddx = q.x - p.x, ddy = q.y - p.y;
+              const d2  = ddx * ddx + ddy * ddy;
+              if (candCount < 128) { candIdx[candCount] = j; candDist[candCount] = d2; candCount++; }
+            }
+          }
+        }
+
+        // Partial insertion sort to find K nearest
+        const kActual = Math.min(K_NEIGHBORS, candCount);
+        for (let a = 0; a < kActual; a++) {
+          let minPos = a;
+          for (let b = a + 1; b < candCount; b++) {
+            if (candDist[b] < candDist[minPos]) minPos = b;
+          }
+          const tmpI = candIdx[a]; candIdx[a] = candIdx[minPos]; candIdx[minPos] = tmpI;
+          const tmpD = candDist[a]; candDist[a] = candDist[minPos]; candDist[minPos] = tmpD;
+        }
+
+        for (let a = 0; a < kActual; a++) {
+          const q   = particles[candIdx[a]];
+          const ddx = p.x - q.x, ddy = p.y - q.y;
+          const d   = Math.sqrt(candDist[a]) + 0.001;
+          if (d < SEP_DIST) {
+            const push = (SEP_DIST - d) / SEP_DIST;
+            sepFx += (ddx / d) * push * SEP_STR;
+            sepFy += (ddy / d) * push * SEP_STR;
+          }
+          alignVx += q.vx; alignVy += q.vy;
+          cohX    += q.x;  cohY    += q.y;
+        }
+
+        p.bfx = sepFx;
+        p.bfy = sepFy;
+        if (kActual > 0) {
+          p.bfx += (alignVx / kActual - p.vx) * ALIGN_W + (cohX / kActual - p.x) * COH_W;
+          p.bfy += (alignVy / kActual - p.vy) * ALIGN_W + (cohY / kActual - p.y) * COH_W;
+        }
       }
     }
 
@@ -790,6 +931,11 @@ function tick(dt) {
     const ny = noiseXY(p.x * nScale + p.seed + 31.7,       p.y * nScale + nTime + 17.3);
     let nfx = nx * motionAmp;
     let nfy = ny * motionAmp;
+    // Add boids forces for murmuration (separation + alignment + cohesion)
+    if (state.shape === 'murmuration') {
+      nfx += p.bfx ?? 0;
+      nfy += p.bfy ?? 0;
+    }
     // Per-bird wingbeat jitter: each bird has an independent oscillation phase via p.seed
     if (state.shape === 'murmuration') {
       const jT = time * 2.8 + p.seed;
@@ -866,8 +1012,7 @@ function buildArrays() {
       tVal = p.bx / (2 * Math.PI);
       sizeArr[i] = 5.0;
     } else if (state.shape === 'murmuration') {
-      // Uniform small particles — density variation via additive blending does the visual work
-      tVal = 0.22;
+      tVal = 0.65;
       sizeArr[i] = 5.0;
     } else if (state.shape === 'hopf') {
       // Color cycles through the spectrum once per fiber — each linked ring gets a distinct hue
@@ -885,7 +1030,24 @@ function buildArrays() {
 
 // --- Render ---
 function render() {
-  gl.clear(gl.COLOR_BUFFER_BIT);
+  if (state.trail === 0) {
+    gl.clear(gl.COLOR_BUFFER_BIT);
+  } else {
+    // Fade previous frame toward background instead of hard-clearing
+    // trail=1→fadeAlpha≈0.97 (short trail), trail=100→fadeAlpha=0.03 (very long trail)
+    const fadeAlpha = 0.1 * Math.pow(0.02, state.trail / 100);
+    gl.useProgram(fadeProg);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf);
+    gl.enableVertexAttribArray(fadeAPos);
+    gl.vertexAttribPointer(fadeAPos, 2, gl.FLOAT, false, 0, 0);
+    gl.uniform1f(uFadeAlpha, fadeAlpha);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    gl.useProgram(prog);
+    gl.enableVertexAttribArray(aPos);
+    gl.enableVertexAttribArray(aTee);
+    gl.enableVertexAttribArray(aSize);
+  }
 
   gl.bindBuffer(gl.ARRAY_BUFFER, posBuf);
   gl.bufferData(gl.ARRAY_BUFFER, posArr, gl.DYNAMIC_DRAW);
@@ -899,9 +1061,15 @@ function render() {
   gl.bufferData(gl.ARRAY_BUFFER, sizeArr, gl.DYNAMIC_DRAW);
   gl.vertexAttribPointer(aSize, 1, gl.FLOAT, false, 0, 0);
 
+  // Trail mode: switch to normal blend so particles don't accumulate to white
+  if (state.trail > 0) gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
   gl.uniform2f(uRes, canvas.width, canvas.height);
   gl.uniform1i(uPalette, paletteIndex[state.palette] ?? 0);
   gl.drawArrays(gl.POINTS, 0, N);
+
+  // Restore additive blend for next frame
+  if (state.trail > 0) gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
 }
 
 // --- Resize ---
@@ -947,6 +1115,7 @@ bindControl('tightness',      'tightness-val',      'tightness',     Number);
 bindControl('motion',         'motion-val',         'motion',        Number);
 bindControl('cursor-strength','cursor-strength-val','cursorStrength', Number);
 bindControl('wave-speed',     'wave-speed-val',     'waveSpeed',     Number);
+bindControl('trail',          'trail-val',          'trail',         Number);
 
 document.getElementById('count').addEventListener('input', e => {
   const display = document.getElementById('count-val');
@@ -970,8 +1139,13 @@ document.querySelectorAll('.shape-card').forEach(card => {
     const W = canvas.width, H = canvas.height;
     if (state.shape === 'murmuration') {
       flockCx = W / 2; flockCy = H / 2; flockVx = 0; flockVy = 0;
-      murmuEnergy = 0; murmuEnergyPrev = 0; murmuEnergyDot = 0; sweepPhase = 0; waveAngle = Math.PI * 0.25;
+      murmuEnergy = 0; murmuEnergyPrev = 0; murmuEnergyDot = 0; sweepPhase = 0; waveAngle = Math.PI * 0.25; vortexBlend = 0;
       pickNewFlockTarget(W, H);
+      document.getElementById('flock-section').style.display = 'flex';
+    } else {
+      document.getElementById('flock-section').style.display = 'none';
+      state.murmuMotion = 'off';
+      document.querySelectorAll('.flock-card').forEach(c => c.classList.toggle('active', c.dataset.value === 'off'));
     }
     applyHomes(generateHomes(W, H));
   });
@@ -985,6 +1159,14 @@ document.getElementById('frequency').addEventListener('input', e => {
   if (['wave', 'harmonic', 'lissajous', 'murmuration'].includes(state.shape)) {
     applyHomes(generateHomes(canvas.width, canvas.height));
   }
+});
+
+document.querySelectorAll('.flock-card').forEach(card => {
+  card.addEventListener('click', () => {
+    document.querySelectorAll('.flock-card').forEach(c => c.classList.remove('active'));
+    card.classList.add('active');
+    state.murmuMotion = card.dataset.value;
+  });
 });
 
 document.getElementById('save-btn').addEventListener('click', () => {

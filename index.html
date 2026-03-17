@@ -39,6 +39,16 @@
       <span class="value-display" id="wave-speed-val">40</span>
     </div>
 
+    <!-- FLOCK (only shown when murmuration is active) -->
+    <div id="flock-section" style="display:none; flex-direction:column; gap:8px;">
+      <span class="section-label" style="border-top:1px solid rgba(255,255,255,0.07); padding-top:8px; margin-top:4px;">Flock</span>
+      <div class="card-grid three-col">
+        <button class="flock-card active" data-value="off">— <span>Off</span></button>
+        <button class="flock-card" data-value="wave">∿ <span>Wave</span></button>
+        <button class="flock-card" data-value="lissajous">∞ <span>Lissajous</span></button>
+      </div>
+    </div>
+
     <!-- PHYSICS -->
     <span class="section-label">Physics</span>
     <div class="control-group">
@@ -73,6 +83,11 @@
       <label for="speed">Speed</label>
       <input type="range" id="speed" min="0" max="100" value="20" step="1" />
       <span class="value-display" id="speed-val">20</span>
+    </div>
+    <div class="control-group">
+      <label for="trail">Trail</label>
+      <input type="range" id="trail" min="0" max="100" value="0" step="1" />
+      <span class="value-display" id="trail-val">0</span>
     </div>
 
     <!-- COLOR -->
