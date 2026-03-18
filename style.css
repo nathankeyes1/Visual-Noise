@@ -4,42 +4,71 @@
   padding: 0;
 }
 
+/* --- Default: mobile-first flow layout --- */
 body {
   background: #0a0a0a;
   overflow: hidden;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
 }
 
 canvas {
   display: block;
-  width: 100vw;
-  height: 100vh;
+  flex: 1;
+  width: 100%;
+  height: auto;
+  min-height: 0;
   touch-action: none;
 }
 
-/* --- Bottom bar --- */
+/* --- Controls: stacked panel by default --- */
 #controls {
-  position: fixed;
-  bottom: 24px;
-  left: 50%;
-  transform: translateX(-50%);
+  position: static;
   display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 16px;
-  background: rgba(10, 10, 10, 0.72);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 14px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  padding: 14px 20px 18px;
+  background: rgba(10, 10, 10, 0.92);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
   color: rgba(255, 255, 255, 0.75);
   font-size: 11px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   user-select: none;
-  white-space: nowrap;
-  animation: controlsEnter 300ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+/* --- Desktop: restore floating pill --- */
+@media (min-width: 600px) {
+  body {
+    display: block;
+  }
+
+  canvas {
+    width: 100vw;
+    height: 100vh;
+    flex: none;
+  }
+
+  #controls {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    background: rgba(10, 10, 10, 0.72);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    white-space: nowrap;
+    animation: controlsEnter 300ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  }
 }
 
 @keyframes controlsEnter {
@@ -51,6 +80,13 @@ canvas {
 .shape-row {
   display: flex;
   gap: 4px;
+  justify-content: center;
+}
+
+@media (min-width: 600px) {
+  .shape-row {
+    justify-content: flex-start;
+  }
 }
 
 .shape-card {
@@ -59,7 +95,6 @@ canvas {
   justify-content: center;
   width: 44px;
   height: 44px;
-  padding: 0;
   padding: 0 2px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid transparent;
@@ -70,21 +105,10 @@ canvas {
   transition: background 150ms ease-out, border-color 150ms ease-out, color 150ms ease-out, transform 100ms ease-out;
 }
 
-.shape-card span {
-  font-size: 8px;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.35);
-  transition: color 150ms ease-out;
-}
-
 @media (hover: hover) and (pointer: fine) {
   .shape-card:hover {
     background: rgba(255, 255, 255, 0.1);
     color: rgba(255, 255, 255, 0.85);
-  }
-  .shape-card:hover span {
-    color: rgba(255, 255, 255, 0.55);
   }
 }
 
@@ -98,42 +122,62 @@ canvas {
   color: #fff;
 }
 
-.shape-card.active span {
-  color: rgba(255, 255, 255, 0.6);
-}
-
 /* --- Divider --- */
 .ctrl-divider {
-  width: 1px;
-  height: 32px;
+  width: 100%;
+  height: 1px;
   background: rgba(255, 255, 255, 0.1);
   flex-shrink: 0;
+}
+
+@media (min-width: 600px) {
+  .ctrl-divider {
+    width: 1px;
+    height: 32px;
+  }
 }
 
 /* --- Sliders --- */
 .control-group {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 5px;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+
+@media (min-width: 600px) {
+  .control-group {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+  }
 }
 
 .control-group label {
   color: rgba(255, 255, 255, 0.35);
   font-size: 9px;
   letter-spacing: 0.1em;
+  min-width: 56px;
+}
+
+@media (min-width: 600px) {
+  .control-group label {
+    min-width: unset;
+  }
 }
 
 .control-group-inner {
   display: flex;
   align-items: center;
   gap: 6px;
+  flex: 1;
 }
 
 input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
-  width: 80px;
+  flex: 1;
+  width: auto;
   height: 3px;
   background: rgba(255, 255, 255, 0.15);
   border-radius: 2px;
@@ -141,11 +185,18 @@ input[type="range"] {
   display: block;
 }
 
+@media (min-width: 600px) {
+  input[type="range"] {
+    flex: none;
+    width: 80px;
+  }
+}
+
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 13px;
-  height: 13px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   background: #fff;
   cursor: pointer;
@@ -154,6 +205,11 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 @media (hover: hover) and (pointer: fine) {
+  input[type="range"]::-webkit-slider-thumb {
+    width: 13px;
+    height: 13px;
+  }
+
   input[type="range"]::-webkit-slider-thumb:hover {
     transform: scale(1.2);
   }
@@ -169,72 +225,4 @@ input[type="range"]::-webkit-slider-thumb:active {
   min-width: 18px;
   text-align: right;
   display: inline-block;
-}
-
-/* --- Touch devices: larger thumb targets --- */
-@media (pointer: coarse) {
-  input[type="range"]::-webkit-slider-thumb {
-    width: 20px;
-    height: 20px;
-  }
-}
-
-/* --- Narrow screens: flow layout, canvas fills remaining height --- */
-@media (max-width: 480px) {
-  body {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-  }
-
-  canvas {
-    flex: 1;
-    width: 100%;
-    height: auto;
-    min-height: 0;
-  }
-
-  #controls {
-    position: static;
-    transform: none;
-    flex-direction: column;
-    align-items: stretch;
-    width: 100%;
-    gap: 10px;
-    padding: 14px 20px 18px;
-    border-radius: 0;
-    border-left: none;
-    border-right: none;
-    border-bottom: none;
-    animation: none;
-    white-space: normal;
-  }
-
-  .shape-row {
-    justify-content: center;
-  }
-
-  .ctrl-divider {
-    width: 100%;
-    height: 1px;
-  }
-
-  .control-group {
-    flex-direction: row;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .control-group label {
-    min-width: 56px;
-  }
-
-  .control-group-inner {
-    flex: 1;
-  }
-
-  input[type="range"] {
-    flex: 1;
-    width: auto;
-  }
 }
