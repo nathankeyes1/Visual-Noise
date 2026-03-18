@@ -179,14 +179,39 @@ input[type="range"]::-webkit-slider-thumb:active {
   }
 }
 
-/* --- Narrow screens: stack controls into two rows --- */
+/* --- Narrow screens: flow layout, canvas fills remaining height --- */
 @media (max-width: 480px) {
-  #controls {
+  body {
+    display: flex;
     flex-direction: column;
-    align-items: center;
+    height: 100vh;
+  }
+
+  canvas {
+    flex: 1;
+    width: 100%;
+    height: auto;
+    min-height: 0;
+  }
+
+  #controls {
+    position: static;
+    transform: none;
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
     gap: 10px;
-    padding: 12px 14px;
-    bottom: 16px;
+    padding: 14px 20px 18px;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    animation: none;
+    white-space: normal;
+  }
+
+  .shape-row {
+    justify-content: center;
   }
 
   .ctrl-divider {
@@ -197,14 +222,19 @@ input[type="range"]::-webkit-slider-thumb:active {
   .control-group {
     flex-direction: row;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
   }
 
   .control-group label {
-    min-width: 44px;
+    min-width: 56px;
+  }
+
+  .control-group-inner {
+    flex: 1;
   }
 
   input[type="range"] {
-    width: 64px;
+    flex: 1;
+    width: auto;
   }
 }
