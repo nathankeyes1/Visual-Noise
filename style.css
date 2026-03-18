@@ -14,6 +14,7 @@ canvas {
   display: block;
   width: 100vw;
   height: 100vh;
+  touch-action: none;
 }
 
 /* --- Bottom bar --- */
@@ -168,4 +169,42 @@ input[type="range"]::-webkit-slider-thumb:active {
   min-width: 18px;
   text-align: right;
   display: inline-block;
+}
+
+/* --- Touch devices: larger thumb targets --- */
+@media (pointer: coarse) {
+  input[type="range"]::-webkit-slider-thumb {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+/* --- Narrow screens: stack controls into two rows --- */
+@media (max-width: 480px) {
+  #controls {
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    bottom: 16px;
+  }
+
+  .ctrl-divider {
+    width: 100%;
+    height: 1px;
+  }
+
+  .control-group {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .control-group label {
+    min-width: 44px;
+  }
+
+  input[type="range"] {
+    width: 64px;
+  }
 }

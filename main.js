@@ -637,6 +637,34 @@ window.addEventListener('mousemove', e => {
   cursor.prevT  = now;
 });
 
+function updateCursorFromTouch(e) {
+  e.preventDefault();
+  const t   = e.touches[0];
+  const now = performance.now() / 1000;
+  const dt  = Math.max(now - cursor.prevT, 0.001);
+  if (cursor.prevCX !== null) {
+    cursor.vx = (t.clientX - cursor.prevCX) / dt;
+    cursor.vy = (t.clientY - cursor.prevCY) / dt;
+    const raw = Math.hypot(cursor.vx, cursor.vy);
+    cursor.smoothedSpeed = cursor.smoothedSpeed * 0.85 + raw * 0.15;
+  }
+  cursor.x = t.clientX / window.innerWidth;
+  cursor.y = t.clientY / window.innerHeight;
+  cursor.prevCX = t.clientX;
+  cursor.prevCY = t.clientY;
+  cursor.prevT  = now;
+}
+
+canvas.addEventListener('touchstart', updateCursorFromTouch, { passive: false });
+canvas.addEventListener('touchmove',  updateCursorFromTouch, { passive: false });
+canvas.addEventListener('touchend', () => {
+  cursor.vx = 0;
+  cursor.vy = 0;
+  cursor.smoothedSpeed = 0;
+  cursor.prevCX = null;
+  cursor.prevCY = null;
+});
+
 // --- Physics tick ---
 function tick(dt) {
   const W = canvas.width, H = canvas.height;
