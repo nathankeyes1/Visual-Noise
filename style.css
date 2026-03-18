@@ -16,62 +16,129 @@ canvas {
   height: 100vh;
 }
 
+/* --- Bottom bar --- */
 #controls {
   position: fixed;
-  top: 50%;
-  left: 24px;
-  transform: translateY(-50%);
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 20px 16px;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
   background: rgba(10, 10, 10, 0.72);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
+  border-radius: 14px;
   color: rgba(255, 255, 255, 0.75);
   font-size: 11px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   user-select: none;
-  width: 224px;
-  animation: controlsEnter 280ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  white-space: nowrap;
+  animation: controlsEnter 300ms cubic-bezier(0.23, 1, 0.32, 1) both;
 }
 
 @keyframes controlsEnter {
-  from {
-    opacity: 0;
-    transform: translateY(-50%) translateX(-6px);
+  from { opacity: 0; transform: translateX(-50%) translateY(8px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* --- Shape row --- */
+.shape-row {
+  display: flex;
+  gap: 4px;
+}
+
+.shape-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  width: 56px;
+  height: 44px;
+  padding: 0 2px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 150ms ease-out, border-color 150ms ease-out, color 150ms ease-out, transform 100ms ease-out;
+}
+
+.shape-card span {
+  font-size: 8px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.35);
+  transition: color 150ms ease-out;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .shape-card:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.85);
   }
-  to {
-    opacity: 1;
-    transform: translateY(-50%) translateX(0);
+  .shape-card:hover span {
+    color: rgba(255, 255, 255, 0.55);
   }
 }
 
+.shape-card:active {
+  transform: scale(0.95);
+}
+
+.shape-card.active {
+  border-color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.shape-card.active span {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* --- Divider --- */
+.ctrl-divider {
+  width: 1px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+}
+
+/* --- Sliders --- */
 .control-group {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
 }
 
 .control-group label {
-  color: rgba(255, 255, 255, 0.4);
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  min-width: 52px;
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+}
+
+.control-group-inner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
-  width: 90px;
+  width: 80px;
   height: 3px;
   background: rgba(255, 255, 255, 0.15);
   border-radius: 2px;
   outline: none;
+  display: block;
 }
 
 input[type="range"]::-webkit-slider-thumb {
@@ -97,303 +164,9 @@ input[type="range"]::-webkit-slider-thumb:active {
 }
 
 .value-display {
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 10px;
-  min-width: 20px;
-  text-align: right;
-}
-
-.section-label {
-  display: block;
-  font-size: 9px;
-  color: rgba(255, 255, 255, 0.25);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  padding-top: 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.07);
-  margin-top: 4px;
-}
-
-.section-label.first {
-  border-top: none;
-  padding-top: 0;
-  margin-top: 0;
-}
-
-.card-grid {
-  display: grid;
-  gap: 4px;
-}
-
-.card-grid.four-col {
-  grid-template-columns: repeat(4, 1fr);
-}
-
-.card-grid.three-col {
-  grid-template-columns: repeat(3, 1fr);
-}
-
-.card-grid.two-col {
-  grid-template-columns: repeat(2, 1fr);
-}
-
-#shape-section {
-  display: contents;
-}
-
-.shape-card,
-.flock-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  height: 48px;
-  padding: 0 2px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid transparent;
-  border-radius: 6px;
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 14px;
-  cursor: pointer;
-  transition: background 150ms ease-out, border-color 150ms ease-out, color 150ms ease-out, transform 100ms ease-out;
-}
-
-.shape-card span,
-.flock-card span {
-  font-size: 8px;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.35);
-  transition: color 150ms ease-out;
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .shape-card:hover,
-  .flock-card:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: rgba(255, 255, 255, 0.85);
-  }
-
-  .shape-card:hover span,
-  .flock-card:hover span {
-    color: rgba(255, 255, 255, 0.55);
-  }
-}
-
-.shape-card:active,
-.flock-card:active {
-  transform: scale(0.95);
-}
-
-.shape-card.active,
-.flock-card.active {
-  border-color: rgba(255, 255, 255, 0.7);
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
-}
-
-.shape-card.active span,
-.flock-card.active span {
-  color: rgba(255, 255, 255, 0.6);
-}
-
-.palette-row {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 5px;
-}
-
-.palette-card {
-  height: 22px;
-  border-radius: 4px;
-  border: 1.5px solid transparent;
-  cursor: pointer;
-  transition: border-color 150ms ease-out, transform 100ms ease-out;
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .palette-card:hover {
-    transform: scale(1.05);
-  }
-}
-
-.palette-card:active {
-  transform: scale(0.95);
-}
-
-.palette-card.active {
-  border-color: #fff;
-}
-
-#save-btn {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: rgba(255, 255, 255, 0.6);
-  border-radius: 8px;
-  padding: 6px 14px;
-  font-size: 11px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: background 150ms ease-out, border-color 150ms ease-out, color 150ms ease-out, transform 100ms ease-out;
-}
-
-@media (hover: hover) and (pointer: fine) {
-  #save-btn:hover {
-    background: rgba(255, 255, 255, 0.15);
-    border-color: rgba(255, 255, 255, 0.22);
-    color: #fff;
-  }
-}
-
-#save-btn:active {
-  transform: scale(0.97);
-}
-
-@media (max-width: 640px) {
-  #controls {
-    top: auto;
-    bottom: 16px;
-    left: 50%;
-    transform: translateX(-50%);
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: center;
-    max-width: calc(100vw - 32px);
-    animation-name: controlsEnterMobile;
-  }
-}
-
-/* --- Theme segment control --- */
-#theme-segment {
-  position: fixed;
-  top: 20px;
-  right: 24px;
-  display: flex;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 8px;
-  padding: 3px;
-  gap: 2px;
-  z-index: 10;
-}
-
-.segment-btn {
-  padding: 5px 14px;
-  border-radius: 5px;
-  border: none;
-  background: transparent;
   color: rgba(255, 255, 255, 0.45);
-  font-size: 11px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: background 150ms ease-out, color 150ms ease-out;
-}
-
-.segment-btn.active {
-  background: rgba(255, 255, 255, 0.18);
-  color: #fff;
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .segment-btn:not(.active):hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: rgba(255, 255, 255, 0.75);
-  }
-}
-
-/* --- Light mode overrides --- */
-body.light-mode #theme-segment {
-  background: rgba(0, 0, 0, 0.06);
-  border-color: rgba(0, 0, 0, 0.12);
-}
-
-body.light-mode .segment-btn {
-  color: rgba(0, 0, 0, 0.4);
-}
-
-body.light-mode .segment-btn.active {
-  background: rgba(0, 0, 0, 0.12);
-  color: rgba(0, 0, 0, 0.85);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  body.light-mode .segment-btn:not(.active):hover {
-    background: rgba(0, 0, 0, 0.08);
-    color: rgba(0, 0, 0, 0.65);
-  }
-}
-
-body.light-mode #controls {
-  background: rgba(240, 232, 214, 0.82);
-  border-color: rgba(0, 0, 0, 0.08);
-  color: rgba(0, 0, 0, 0.7);
-}
-
-body.light-mode .section-label {
-  color: rgba(0, 0, 0, 0.3);
-  border-top-color: rgba(0, 0, 0, 0.08);
-}
-
-body.light-mode .control-group label { color: rgba(0, 0, 0, 0.4); }
-body.light-mode .value-display       { color: rgba(0, 0, 0, 0.45); }
-
-body.light-mode input[type="range"] {
-  background: rgba(0, 0, 0, 0.15);
-}
-
-body.light-mode input[type="range"]::-webkit-slider-thumb {
-  background: #222;
-  box-shadow: 0 0 6px rgba(0, 0, 0, 0.2);
-}
-
-body.light-mode .shape-card,
-body.light-mode .flock-card {
-  background: rgba(0, 0, 0, 0.05);
-  color: rgba(0, 0, 0, 0.55);
-}
-
-body.light-mode .shape-card span,
-body.light-mode .flock-card span { color: rgba(0, 0, 0, 0.35); }
-
-body.light-mode .shape-card.active,
-body.light-mode .flock-card.active {
-  border-color: rgba(0, 0, 0, 0.6);
-  background: rgba(0, 0, 0, 0.1);
-  color: rgba(0, 0, 0, 0.85);
-}
-
-body.light-mode .shape-card.active span,
-body.light-mode .flock-card.active span { color: rgba(0, 0, 0, 0.55); }
-
-body.light-mode #save-btn {
-  background: rgba(0, 0, 0, 0.06);
-  border-color: rgba(0, 0, 0, 0.1);
-  color: rgba(0, 0, 0, 0.55);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  body.light-mode .shape-card:hover,
-  body.light-mode .flock-card:hover {
-    background: rgba(0, 0, 0, 0.1);
-    color: rgba(0, 0, 0, 0.85);
-  }
-  body.light-mode #save-btn:hover {
-    background: rgba(0, 0, 0, 0.12);
-    border-color: rgba(0, 0, 0, 0.2);
-    color: rgba(0, 0, 0, 0.85);
-  }
-}
-
-@keyframes controlsEnterMobile {
-  from {
-    opacity: 0;
-    transform: translateX(-50%) translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
+  font-size: 10px;
+  min-width: 18px;
+  text-align: right;
+  display: inline-block;
 }

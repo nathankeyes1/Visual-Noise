@@ -36,7 +36,7 @@ const state = {
   scale: 30,
   speed: 20,
   palette: 'mono',
-  shape: 'circle',
+  shape: 'murmuration',
   tightness: 65,
   motion: 35,
   cursorStrength: 100,
