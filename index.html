@@ -8,7 +8,12 @@
 </head>
 <body>
   <canvas id="canvas"></canvas>
-  <button id="theme-toggle">◑ Light</button>
+
+  <!-- Theme segmented control — top right -->
+  <div id="theme-segment">
+    <button class="segment-btn active" data-theme="dark">Dark</button>
+    <button class="segment-btn" data-theme="light">Light</button>
+  </div>
 
   <div id="controls">
 
@@ -89,17 +94,6 @@
       <label for="trail">Trail</label>
       <input type="range" id="trail" min="0" max="100" value="0" step="1" />
       <span class="value-display" id="trail-val">0</span>
-    </div>
-
-    <!-- COLOR -->
-    <span class="section-label">Color</span>
-    <div class="palette-row">
-      <button class="palette-card active" data-value="mono" title="Mono" style="background: linear-gradient(to right, #111, #fff)"></button>
-      <button class="palette-card" data-value="ice" title="Ice" style="background: linear-gradient(to right, #0a1450, #dcf0ff)"></button>
-      <button class="palette-card" data-value="ember" title="Ember" style="background: linear-gradient(to right, #000, #c80000, #ff6600, #fff)"></button>
-      <button class="palette-card" data-value="acid" title="Acid" style="background: linear-gradient(to right, #1e3d0f, #00ff44)"></button>
-      <button class="palette-card" data-value="dusk" title="Dusk" style="background: linear-gradient(to right, #0a0528, #c850c0, #ffcc70)"></button>
-      <button class="palette-card" data-value="aurora" title="Aurora" style="background: linear-gradient(to right, #001a0f, #00ffcc, #7b2fff)"></button>
     </div>
 
     <button id="save-btn">Save PNG</button>

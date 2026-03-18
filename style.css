@@ -265,47 +265,64 @@ input[type="range"]::-webkit-slider-thumb:active {
   }
 }
 
-/* --- Theme toggle --- */
-#theme-toggle {
+/* --- Theme segment control --- */
+#theme-segment {
   position: fixed;
   top: 20px;
-  left: 24px;
+  right: 24px;
+  display: flex;
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.14);
-  color: rgba(255, 255, 255, 0.6);
   border-radius: 8px;
-  padding: 6px 12px;
+  padding: 3px;
+  gap: 2px;
+  z-index: 10;
+}
+
+.segment-btn {
+  padding: 5px 14px;
+  border-radius: 5px;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.45);
   font-size: 11px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   cursor: pointer;
-  transition: background 150ms ease-out, border-color 150ms ease-out,
-              color 150ms ease-out, transform 100ms ease-out;
-  z-index: 10;
+  transition: background 150ms ease-out, color 150ms ease-out;
+}
+
+.segment-btn.active {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
 }
 
 @media (hover: hover) and (pointer: fine) {
-  #theme-toggle:hover {
-    background: rgba(255, 255, 255, 0.15);
-    border-color: rgba(255, 255, 255, 0.25);
-    color: #fff;
+  .segment-btn:not(.active):hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.75);
   }
 }
 
-#theme-toggle:active { transform: scale(0.96); }
-
 /* --- Light mode overrides --- */
-body.light-mode #theme-toggle {
+body.light-mode #theme-segment {
   background: rgba(0, 0, 0, 0.06);
-  border-color: rgba(0, 0, 0, 0.14);
-  color: rgba(0, 0, 0, 0.55);
+  border-color: rgba(0, 0, 0, 0.12);
+}
+
+body.light-mode .segment-btn {
+  color: rgba(0, 0, 0, 0.4);
+}
+
+body.light-mode .segment-btn.active {
+  background: rgba(0, 0, 0, 0.12);
+  color: rgba(0, 0, 0, 0.85);
 }
 
 @media (hover: hover) and (pointer: fine) {
-  body.light-mode #theme-toggle:hover {
-    background: rgba(0, 0, 0, 0.12);
-    border-color: rgba(0, 0, 0, 0.22);
-    color: rgba(0, 0, 0, 0.85);
+  body.light-mode .segment-btn:not(.active):hover {
+    background: rgba(0, 0, 0, 0.08);
+    color: rgba(0, 0, 0, 0.65);
   }
 }
 

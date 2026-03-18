@@ -28,8 +28,9 @@ let murmuEnergyPrev = 0;   // previous frame value, for dE/dt
 let murmuEnergyDot  = 0;   // smoothed rate of change (rubato)
 let sweepPhase      = 0;   // integrates over time → circular sweep direction
 let waveAngle       = Math.PI * 0.25;  // direction of traveling plane wave through flock
-let vortexBlend     = 0;   // 0=calm sheet, 1=full spiral arms — driven by energy peaks
-let vortexPattern   = 0;   // 0=classic roll, 1=outward bloom, 2=split ring, 3=accordion
+let surgeBlend    = 0;   // 0=calm, 1=full crash surge
+let surgeAngle    = 0;   // direction of the crash wave (random per event)
+let surgeCooldown = 0;   // seconds before next surge allowed
 
 const state = {
   scale: 30,
@@ -71,7 +72,7 @@ uniform float u_lightMode;
 varying float v_t;
 
 vec3 palette_mono(float t) {
-  return vec3(t);
+  return vec3(1.0);
 }
 
 vec3 palette_ice(float t) {
@@ -675,16 +676,18 @@ function tick(dt) {
     murmuEnergyPrev = murmuEnergy;
     waveAngle += dt * (0.013 + 0.025 * murmuEnergy);
 
-    // Vortex burst: fast attack when energy crescendos, slow lingering decay
-    const vortexTarget = murmuEnergy > 0.35
-      ? Math.pow((murmuEnergy - 0.35) / 0.65, 1.5)
-      : 0;
-    const wasInactive = vortexBlend < 0.05;
-    const vortexRate = vortexTarget > vortexBlend ? 1.5 : 0.35;
-    vortexBlend += (vortexTarget - vortexBlend) * Math.min(dt * vortexRate, 1.0);
-    // Lock in a new random pattern at the start of each burst
-    if (wasInactive && vortexBlend >= 0.05) {
-      vortexPattern = Math.floor(Math.random() * 4);
+    // Wave crash surge: rare directional events gated by energy peak + cooldown
+    if (surgeCooldown > 0) surgeCooldown -= dt;
+    const surgeTarget = (murmuEnergy > 0.48 && surgeCooldown <= 0)
+      ? Math.pow((murmuEnergy - 0.48) / 0.52, 1.8) : 0;
+    const wasCalm   = surgeBlend < 0.05;
+    const surgeRate = surgeTarget > surgeBlend ? 0.45 : 0.18;
+    surgeBlend += (surgeTarget - surgeBlend) * Math.min(dt * surgeRate, 1.0);
+    if (wasCalm && surgeBlend >= 0.05) {
+      surgeAngle = Math.random() * Math.PI * 2;
+    }
+    if (!wasCalm && surgeBlend < 0.05 && surgeTarget <= 0) {
+      surgeCooldown = 18 + Math.random() * 20;  // 18–38s quiet gap
     }
   }
 
@@ -745,9 +748,7 @@ function tick(dt) {
   if (state.shape === 'murmuration') {
     const spreadX = W * MURM_SPREAD_X, spreadY = H * MURM_SPREAD_Y;
     sigRef     = spreadX;
-    const calmAmp   = spreadY * (0.28 + 1.1  * murmuEnergy);
-    const vortexAmp = spreadY * (0.12 + 0.45 * murmuEnergy);
-    sheetAmpZ = calmAmp + (vortexAmp - calmAmp) * vortexBlend;
+    sheetAmpZ = spreadY * (0.28 + 2.8 * Math.pow(murmuEnergy, 1.2));
     sheetK1    = (Math.PI * freq) / (spreadX * 2.0);        // freq=1: one crease; freq=4: four
     sheetK2    = (Math.PI * (freq * 0.73)) / (spreadX * 2.0);
     wdCos1     = Math.cos(waveAngle);        wdSin1 = Math.sin(waveAngle);
@@ -819,41 +820,44 @@ function tick(dt) {
         // Expansion (unchanged)
         const expansionScale = 1.0 + 1.8 * Math.pow(murmuEnergy, 1.5);
 
-        // Differential rotation: inner birds faster than outer → arms sweep side to side
-        const bRadius = Math.hypot(p.bxr, p.byr);
-        const rNorm   = Math.min(bRadius / (W * MURM_SPREAD_X), 1.0);
-        const sqrtR   = Math.sqrt(rNorm);
-        let omegaProfile, vortDir;
-        switch (vortexPattern) {
-          case 1:  omegaProfile = 0.45 + 0.55 * sqrtR; vortDir = -1; break;  // outward bloom
-          case 2:  omegaProfile = Math.cos(rNorm * Math.PI); vortDir = 1; break;  // split ring
-          case 3:  omegaProfile = 1.0 - 0.40 * sqrtR; vortDir = Math.sign(Math.sin(time * 0.26)); break;  // accordion ~24s
-          default: omegaProfile = 1.0 - 0.40 * sqrtR; vortDir = 1; break;   // classic roll
-        }
-        const omega = phaseRate * 0.08 * omegaProfile * (1.0 + 0.9 * murmuEnergy) * vortexBlend * vortDir;
-        const vortAng = time * omega + p.seed * 0.001;
-        const cosV = Math.cos(vortAng), sinV = Math.sin(vortAng);
-        const rotX = p.bxr * cosV - p.byr * sinV;
-        const rotY = p.bxr * sinV + p.byr * cosV;
+        // Internal drift field: position-indexed noise so nearby birds move together
+        const driftT = time * 0.14;
+        const dx1 = noiseXY(p.bxr * 0.0016 + driftT * 0.8,  p.byr * 0.0016 + 2.7) * W * 0.032 * (1 + murmuEnergy * 1.2);
+        const dy1 = noiseXY(p.bxr * 0.0016 + 9.1,            p.byr * 0.0016 + driftT * 0.55) * H * 0.032 * (1 + murmuEnergy * 1.2);
+        const dx2 = noiseXY(p.bxr * 0.0042 + driftT * 0.5 + 14.3, p.byr * 0.0042) * W * 0.014;
+        const dy2 = noiseXY(p.bxr * 0.0042,  p.byr * 0.0042 + driftT * 0.4 + 8.6) * H * 0.014;
 
-        // 3D fold on rotated position (secondary — adds organic crease density lines)
-        const proj1 = rotX * wdCos1 + rotY * wdSin1;
-        const proj2 = rotX * wdCos2 + rotY * wdSin2;
+        // 3D fold on bird's flock-relative home position
+        const proj1 = p.bxr * wdCos1 + p.byr * wdSin1;
+        const proj2 = p.bxr * wdCos2 + p.byr * wdSin2;
         const sZ = (sheetAmpZ * (0.62 * Math.sin(sheetK1 * proj1 - phase1)
                                + 0.38 * Math.sin(sheetK2 * proj2 - phase2))
                    + p.bzr * 0.15) * expansionScale;
 
         // Slow tilt + perspective (unchanged)
         const cosT = Math.cos(sheetTilt), sinT = Math.sin(sheetTilt);
-        const baseY   = (rotY + breatheY) * expansionScale;
+        const baseY   = (p.byr + breatheY) * expansionScale;
         const tiltedY = baseY * cosT - sZ * sinT;
         const tiltedZ = baseY * sinT + sZ * cosT;
         const perspScale = focalLen / Math.max(focalLen + tiltedZ, focalLen * 0.3);
-        p.hx = flockCx + (rotX + breatheX) * expansionScale * perspScale;
+        p.hx = flockCx + (p.bxr + breatheX) * expansionScale * perspScale;
         p.hy = flockCy + tiltedY * perspScale;
 
-        // Lissajous-frequency undulation (tracks rotated position)
-        const murmTheta = Math.atan2(rotY, rotX) + Math.PI;
+        // Surge displacement: breaking-wave shape via tanh front-to-back profile
+        if (surgeBlend > 0.01) {
+          const cosS = Math.cos(surgeAngle), sinS = Math.sin(surgeAngle);
+          const proj = p.bxr * cosS + p.byr * sinS;
+          const halfSpan = W * MURM_SPREAD_X;
+          const surgeFactor = Math.tanh(proj / (halfSpan * 0.5)) * 0.5 + 0.5;  // 0→1 front-to-back
+          const surgeAmt = surgeBlend * W * 0.055 * (0.3 + 0.7 * surgeFactor) * expansionScale;
+          p.hx += cosS * surgeAmt;
+          p.hy += sinS * surgeAmt;
+        }
+        p.hx += dx1 + dx2;
+        p.hy += dy1 + dy2;
+
+        // Lissajous-frequency undulation (tracks bird's home position)
+        const murmTheta = Math.atan2(p.byr, p.bxr) + Math.PI;
         const [la, lb] = LISSAJOUS_RATIOS[freq];
         p.hx += Math.sin(la * murmTheta + phase * 0.5) * W * 0.018;
         p.hy += Math.sin(lb * murmTheta) * W * 0.018;
@@ -1062,7 +1066,8 @@ function render() {
     gl.clearColor(bg[0], bg[1], bg[2], 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT);
   } else {
-    const fadeAlpha = 0.1 * Math.pow(0.02, state.trail / 100);
+    const baseFade  = 0.1 * Math.pow(0.02, state.trail / 100);
+    const fadeAlpha = state.lightMode ? Math.max(baseFade, 0.04) : baseFade;
     gl.useProgram(fadeProg);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf);
@@ -1166,7 +1171,7 @@ document.querySelectorAll('.shape-card').forEach(card => {
     const W = canvas.width, H = canvas.height;
     if (state.shape === 'murmuration') {
       flockCx = W / 2; flockCy = H / 2; flockVx = 0; flockVy = 0;
-      murmuEnergy = 0; murmuEnergyPrev = 0; murmuEnergyDot = 0; sweepPhase = 0; waveAngle = Math.PI * 0.25; vortexBlend = 0; vortexPattern = 0;
+      murmuEnergy = 0; murmuEnergyPrev = 0; murmuEnergyDot = 0; sweepPhase = 0; waveAngle = Math.PI * 0.25; surgeBlend = 0; surgeAngle = 0; surgeCooldown = 0;
       pickNewFlockTarget(W, H);
       document.getElementById('flock-section').style.display = 'flex';
     } else {
@@ -1196,10 +1201,15 @@ document.querySelectorAll('.flock-card').forEach(card => {
   });
 });
 
-document.getElementById('theme-toggle').addEventListener('click', () => {
-  state.lightMode = !state.lightMode;
-  document.body.classList.toggle('light-mode', state.lightMode);
-  document.getElementById('theme-toggle').textContent = state.lightMode ? '◑ Dark' : '◑ Light';
+document.querySelectorAll('.segment-btn[data-theme]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const isLight = btn.dataset.theme === 'light';
+    state.lightMode = isLight;
+    document.body.classList.toggle('light-mode', isLight);
+    document.querySelectorAll('.segment-btn[data-theme]').forEach(b => {
+      b.classList.toggle('active', b === btn);
+    });
+  });
 });
 
 document.getElementById('save-btn').addEventListener('click', () => {
