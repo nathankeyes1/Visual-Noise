@@ -1134,6 +1134,7 @@ function loop(ts) {
 // --- Controls ---
 function bindControl(id, valId, key, transform) {
   const el = document.getElementById(id);
+  if (!el) return;
   const display = document.getElementById(valId);
   el.addEventListener('input', () => {
     state[key] = transform(el.value);
@@ -1149,7 +1150,7 @@ bindControl('cursor-strength','cursor-strength-val','cursorStrength', Number);
 bindControl('wave-speed',     'wave-speed-val',     'waveSpeed',     Number);
 bindControl('trail',          'trail-val',          'trail',         Number);
 
-document.getElementById('count').addEventListener('input', e => {
+document.getElementById('count')?.addEventListener('input', e => {
   const display = document.getElementById('count-val');
   if (display) display.textContent = e.target.value;
   reinitAll(Number(e.target.value));
@@ -1173,9 +1174,11 @@ document.querySelectorAll('.shape-card').forEach(card => {
       flockCx = W / 2; flockCy = H / 2; flockVx = 0; flockVy = 0;
       murmuEnergy = 0; murmuEnergyPrev = 0; murmuEnergyDot = 0; sweepPhase = 0; waveAngle = Math.PI * 0.25; surgeBlend = 0; surgeAngle = 0; surgeCooldown = 0;
       pickNewFlockTarget(W, H);
-      document.getElementById('flock-section').style.display = 'flex';
+      const fs = document.getElementById('flock-section');
+      if (fs) fs.style.display = 'flex';
     } else {
-      document.getElementById('flock-section').style.display = 'none';
+      const fs = document.getElementById('flock-section');
+      if (fs) fs.style.display = 'none';
       state.murmuMotion = 'off';
       document.querySelectorAll('.flock-card').forEach(c => c.classList.toggle('active', c.dataset.value === 'off'));
     }
@@ -1212,7 +1215,7 @@ document.querySelectorAll('.segment-btn[data-theme]').forEach(btn => {
   });
 });
 
-document.getElementById('save-btn').addEventListener('click', () => {
+document.getElementById('save-btn')?.addEventListener('click', () => {
   const link = document.createElement('a');
   link.download = `visual-noise-${Date.now()}.png`;
   link.href = canvas.toDataURL('image/png');
